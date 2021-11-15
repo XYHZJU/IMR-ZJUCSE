@@ -6,7 +6,7 @@ import math
 import copy
 import numpy as np
 import scipy
- 
+ #test1
 show_animation = True
 KNN = 5
 better_planning =True
