@@ -5,6 +5,7 @@ import random
 import math
 import copy
 import numpy as np
+import scipy
  
 show_animation = True
 KNN = 5
