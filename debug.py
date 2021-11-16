@@ -111,6 +111,25 @@ class Debugger(object):
                 # print(sample_x[i], sample_y[i], sample_x[edge], sample_y[edge])
                 line.FORWARD = True
                 line.BACK = True
+    
+    def draw_roadmap2(self, package, nodelist, road_map):
+        for (i, edges) in zip(range(len(road_map)), road_map):
+            # print(edges)
+            #print(road_map)
+            for edge in edges:
+                if(edge<len(nodelist)):
+                    #print(type(edge))
+                    msg = package.msgs.add()
+                    msg.type = Debug_Msg.LINE
+                    msg.color = Debug_Msg.WHITE
+                    line = msg.line
+                    line.start.x = nodelist[i].x
+                    line.start.y = nodelist[i].y
+                    line.end.x = nodelist[edge].x
+                    line.end.y = nodelist[edge].y
+                    # print(sample_x[i], sample_y[i], sample_x[edge], sample_y[edge])
+                    line.FORWARD = True
+                    line.BACK = True
 
     def draw_finalpath(self, package, x, y):
         for i in range(len(x)-1):
@@ -132,9 +151,31 @@ class Debugger(object):
         self.draw_finalpath(package, path_x, path_y)
         self.sock.sendto(package.SerializeToString(), self.debug_address)
     
+    def draw_all2(self, nodelist, road_map, path_x, path_y):
+        package = Debug_Msgs()
+        #self.draw_points(package, sample_x, sample_y)
+        self.draw_roadmap2(package, nodelist, road_map)
+        self.draw_finalpath(package, path_x, path_y)
+        self.sock.sendto(package.SerializeToString(), self.debug_address)
+
     def show_path(self,path_x,path_y):
         package = Debug_Msgs()
         self.draw_finalpath(package,path_x,path_y)
+        self.sock.sendto(package.SerializeToString(), self.debug_address)
+
+    def show_points(self, x, y):
+        package = Debug_Msgs()
+        self.draw_points(package, x, y)
+        self.sock.sendto(package.SerializeToString(), self.debug_address)
+    
+    def show_point(self, x, y):
+        package = Debug_Msgs()
+        self.draw_point(package, x, y)
+        self.sock.sendto(package.SerializeToString(), self.debug_address)
+    
+    def show_circle1(self, x, y, radius=300):
+        package = Debug_Msgs()
+        self.draw_circle(package, x, y, radius)
         self.sock.sendto(package.SerializeToString(), self.debug_address)
 
 
