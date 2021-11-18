@@ -63,8 +63,10 @@ class RRT(object):
         self.end = Node(goal[0],goal[1])
         self.expandDis = 100
         self.goalSampleRate = 0.05  # 选择终点的概率
+        self.startSampleRate = 0.05 # 反向选择起点的概率
         self.maxIter = 500
         self.nodeList = [self.begin]
+        self.nodeList2 = [self.end]
         
         
 
@@ -188,6 +190,15 @@ class RRT(object):
         else:
                 rnd = [self.end.x, self.end.y]
         return rnd
+    
+    def sample3(self):
+        
+        rnd = []
+        if random.random() > self.startSampleRate:
+                rnd = self.random_node()
+        else:
+                rnd = [self.begin.x, self.begin.y]
+        return rnd
 
     def generate_roadmap(self, sample_x, sample_y, obstree):
         road_map = []
@@ -250,32 +261,48 @@ class RRT(object):
                 break
 
             rnd = self.sample2()
+            rnd2 = self.sample3()
             min_index = self.get_nearest_list_index(self.nodeList, rnd)
+            min_index2 = self.get_nearest_list_index(self.nodeList2, rnd2)
             
             #print(nn_list)
             # print(min_index)
  
             # expand tree
             nearest_node = self.nodeList[min_index]
+            nearest_node2 = self.nodeList2[min_index2]
  
             # 返回弧度制
             theta = math.atan2(rnd[1] - nearest_node.y, rnd[0] - nearest_node.x)
+            theta2 = math.atan2(rnd2[1] - nearest_node2.y, rnd2[0] - nearest_node2.x)
  
             new_node = copy.deepcopy(nearest_node)
+            new_node2 = copy.deepcopy(nearest_node2)
             new_node.x += self.expandDis * math.cos(theta)
             new_node.y += self.expandDis * math.sin(theta)
 
+            new_node2.x += self.expandDis * math.cos(theta2)
+            new_node2.y += self.expandDis * math.sin(theta2)
+
             bestnode = min_index
+            bestnode2 = min_index2
             #ans = self.show_obs(new_node.x, new_node.y, obstacle_x, obstacle_y, obstree)
             compare = []
-            if(len(self.nodeList)>self.KNN):
+            compare2 = []
+            if(len(self.nodeList)>self.KNN and len(self.nodeList2)>self.KNN):
                 nn_list =self.get_KNN_list_index(self.nodeList,[new_node.x,new_node.y])
+                nn_list2 =self.get_KNN_list_index(self.nodeList2,[new_node2.x,new_node2.y])
                 #print(nn_list,min_index)
                 for l in range(self.KNN):
                     dx = self.nodeList[nn_list[l]].x - new_node.x
                     dy = self.nodeList[nn_list[l]].y - new_node.y
                     long = math.hypot(dx,dy)
-                    if long<=self.expandDis:
+
+                    dx2 = self.nodeList2[nn_list2[l]].x - new_node2.x
+                    dy2 = self.nodeList2[nn_list2[l]].y - new_node2.y
+                    long2 = math.hypot(dx2,dy2)
+
+                    if long <= self.expandDis:
                         new_node.parent = nn_list[l]
                         #debugger.show_point(new_node.x,new_node.y)
                         
@@ -298,14 +325,44 @@ class RRT(object):
                             cpath.append([self.begin.x, self.begin.y])
                             
                             compare.append([length(cpath),nn_list[l]])
+                    
+                    if long2 <= self.expandDis:
+                        new_node2.parent = nn_list2[l]
+                        #debugger.show_point(new_node.x,new_node.y)
+                        
+                        tarnode2 = self.nodeList2[nn_list2[l]]
+                        #debugger.show_point(tarnode.x,tarnode.y)
+                        if not self.show_obs(tarnode2.x, tarnode2.y, new_node2.x, new_node2.y, obstacle_x, obstacle_y, obstree):
+                        #if not self.check_obsnew(new_node.x, new_node.y, tarnode.x, tarnode.y, obstree, obslist, obstacle_x, obstacle_y):
+                        #if not self.collision_check(new_node, self.obstacleList):
+                            temp_nodeList2 = self.nodeList2.copy()
+                            #print(len(self.nodeList),len(temp_nodeList))
+                            temp_nodeList2.append(new_node2)
+
+                            cpath2 = [[new_node2.x, new_node2.y]]
+                            last_index2 = len(temp_nodeList2) - 1
+                            #print(temp_nodeList)
+                            while temp_nodeList2[last_index2].parent is not None:
+                                node2 = temp_nodeList2[last_index2]
+                                cpath2.append([node2.x, node2.y])
+                                last_index2 = node2.parent
+                            cpath2.append([self.begin.x, self.begin.y])
+                            
+                            compare2.append([length(cpath2),nn_list2[l]])
+                        
                 compare.sort()
+                compare2.sort()
                 if len(compare)>0 and better_planning:
                     #print("previous:",min_index," now:",compare[0][1])
                     bestnode = compare[0][1]
-            if  self.show_obs(self.nodeList[bestnode].x, self.nodeList[bestnode].y, new_node.x, new_node.y, obstacle_x, obstacle_y, obstree):
+                if len(compare2)>0 and better_planning:
+                    bestnode2 = compare2[0][1]
+
+            if  self.show_obs(self.nodeList[bestnode].x, self.nodeList[bestnode].y, new_node.x, new_node.y, obstacle_x, obstacle_y, obstree) or self.show_obs(self.nodeList2[bestnode2].x, self.nodeList2[bestnode2].y, new_node2.x, new_node2.y, obstacle_x, obstacle_y, obstree):
                 continue
             else:
                 new_node.parent = bestnode
+                new_node2.parent = bestnode2
             
 
 
@@ -313,16 +370,30 @@ class RRT(object):
                 #continue
  
                 self.nodeList.append(new_node)
+                self.nodeList2.append(new_node2)
             road_map.append([len(road_map)])
             road_map[bestnode].append(self.nodeList.index(self.nodeList[-1]))
 
             # check goal
+            '''
             dx = new_node.x - self.end.x
             dy = new_node.y - self.end.y
             d = math.sqrt(dx * dx + dy * dy)
             if d <= self.expandDis/2:
                 print("Goal!!")
                 break
+            '''
+            
+
+            final_one = len(self.nodeList) - 1
+            closestpoint = self.get_nearest_list_index(self.nodeList, [self.nodeList[final_one].x, self.nodeList[final_one].y])
+            dx = self.nodeList[final_one].x - self.nodeList2[closestpoint].x
+            dy = self.nodeList[final_one].y - self.nodeList2[closestpoint].y
+            d = math.sqrt(dx*dx + dy*dy)
+            if d <= self.expandDis:
+                print("Goal!!!")
+                break
+
 
         path = [[self.end.x, self.end.y]]
         path_x = [self.end.x]

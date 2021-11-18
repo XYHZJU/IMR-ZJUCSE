@@ -21,14 +21,16 @@ if __name__ == '__main__':
         path_x,path_y, road_map, nodelist = planner2.generate_RRTree(vision)
 
         #fine = False
-        
+        action.controlObs(vision)
+        debugger.draw_all2(nodelist, road_map, path_x, path_y)
 
         # 2. send command
         action.sendCommand(vx=0, vy=0, vw=0)
+        
 
         # 3. draw debug msg
         #debugger.show_path(path_x,path_y)
-        debugger.draw_all2(nodelist, road_map, path_x, path_y)
+        
         #debugger.show_path(path2[0],path2[1])
         #debugger.draw_finalpath(package,path_x, path_y)
         #debugger.draw_all(sample_x, sample_y, road_map, path_x, path_y)
