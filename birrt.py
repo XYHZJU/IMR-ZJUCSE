@@ -231,6 +231,7 @@ class RRT(object):
         iter = 0
         #obstree = self.obstacle(self,vision)
         road_map = [[0]]
+        road_map2 = [[0]]
         obstacle_x = [-999999]
         obstacle_y = [-999999]
         for robot_blue in vision.blue_robot:
@@ -254,7 +255,7 @@ class RRT(object):
 
         while True:
             
-            edge = []
+            #edge = []
             if(iter<self.maxIter):
                 iter = iter +1
             else:
@@ -372,7 +373,9 @@ class RRT(object):
                 self.nodeList.append(new_node)
                 self.nodeList2.append(new_node2)
             road_map.append([len(road_map)])
+            road_map2.append([len(road_map2)])
             road_map[bestnode].append(self.nodeList.index(self.nodeList[-1]))
+            road_map2[bestnode2].append(self.nodeList2.index(self.nodeList2[-1]))
 
             # check goal
             '''
@@ -386,7 +389,7 @@ class RRT(object):
             
 
             final_one = len(self.nodeList) - 1
-            closestpoint = self.get_nearest_list_index(self.nodeList, [self.nodeList[final_one].x, self.nodeList[final_one].y])
+            closestpoint = self.get_nearest_list_index(self.nodeList2, [self.nodeList[final_one].x, self.nodeList[final_one].y])
             dx = self.nodeList[final_one].x - self.nodeList2[closestpoint].x
             dy = self.nodeList[final_one].y - self.nodeList2[closestpoint].y
             d = math.sqrt(dx*dx + dy*dy)
@@ -394,10 +397,19 @@ class RRT(object):
                 print("Goal!!!")
                 break
 
+        
+        end1 = self.nodeList[final_one]
+        end2 = self.nodeList2[closestpoint]
 
-        path = [[self.end.x, self.end.y]]
-        path_x = [self.end.x]
-        path_y = [self.end.y]
+
+        path = [[end1.x, end1.y]]
+        path2 = [[end2.x, end2.y]]
+        path_x = [end1.x]
+        path_y = [end1.y]
+
+        path2_x = [end2.x]
+        path2_y = [end2.y]
+
         last_index = len(self.nodeList) - 1
         last_index = self.get_nearest_list_index(self.nodeList, path[0])
         while self.nodeList[last_index].parent is not None:
@@ -411,14 +423,36 @@ class RRT(object):
         path.append([self.begin.x, self.begin.y])
         path_x.append(self.begin.x)
         path_y.append(self.begin.y)
+
+        last_index2 = len(self.nodeList2) - 1
+        last_index2 = self.get_nearest_list_index(self.nodeList2, path2[0])
+        while self.nodeList2[last_index2].parent is not None:
+            node2 = self.nodeList2[last_index2]
+            
+            path2.append([node2.x, node2.y])
+            path2_x.append(node2.x)
+            path2_y.append(node2.y)
+            last_index2 = node2.parent
+            
+        path2.append([self.end.x, self.end.y])
+        path2_x.append(self.end.x)
+        path2_y.append(self.end.y)
+
+        path2.reverse()
+        path2_x.reverse()
+        path2_y.reverse()
+        final_path = path2.extend(path)
+        path2_x.extend(path_x)
+        path2_y.extend(path_y)
         #print("path:",path)
         #print("x:",path_x)
         #print("y:",path_y)
         #t1 = [1,0]
         #t2 = [100,100]
         #Debugger.show_path(t1, t2)
+        #print(path2_x)
  
-        return path_x,path_y,road_map,self.nodeList
+        return path2_x, path2_y, road_map, road_map2, self.nodeList, self.nodeList2
 
             
         road_map = []
@@ -533,7 +567,7 @@ class RRT(object):
                 if obdis < mindis:
                     mindis = obdis
 
-                theta = cal_ang((nx,ny), (ix,iy), (obsx,obsy))
+                #theta = cal_ang((nx,ny), (ix,iy), (obsx,obsy))
                 if  obdis < dis and obdis2<2*self.avoid_dist:
                     #print(obdis,dis)
                     #debugger.show_circle1(ix,iy,dis)
