@@ -21,11 +21,14 @@ if __name__ == '__main__':
         planner2 = rrt.RRT(begin=[start_x, start_y], goal=[goal_x, goal_y])
         planner3 = birrt.RRT(begin=[start_x, start_y], goal=[goal_x, goal_y])
         path_x,path_y, road_map, road_map2, nodelist, nodelist2 = planner3.generate_RRTree(vision)
+        
+        npath_x,npath_y = planner3.optim_path(vision,path_x,path_y)
 
         #fine = False
         action.controlObs(vision)
-        debugger.draw_all2(nodelist, road_map, path_x, path_y)
-        debugger.draw_all2(nodelist2, road_map2, path_x, path_y)
+        #debugger.draw_all2(nodelist, road_map, path_x, path_y)
+        debugger.draw_all2(nodelist, road_map, npath_x, npath_y)
+        #debugger.draw_all3(nodelist, nodelist2, road_map, road_map2, path_x, path_y)
 
         # 2. send command
         action.sendCommand(vx=0, vy=0, vw=0)

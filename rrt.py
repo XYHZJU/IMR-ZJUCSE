@@ -471,6 +471,44 @@ class RRT(object):
         
         return False
 
+    def show_obs2(self,ix, iy, nx, ny, obstacle_x, obstacle_y, obstree):
+        x = ix
+        y = iy
+        dx = nx - ix
+        dy = ny - iy
+        angle = math.atan2(dy, dx)
+        dis = math.hypot(dx, dy)
+        mindis = 1000
+        if dis > self.MAX_EDGE_LEN:
+            return True
+        distance, index = obstree.query(np.array([x, y]),k=self.KNN)
+        #print("index:",len(obstacle_x))
+        #print(len(obstacle_x),max(index))
+        if (max(index)>=self.KNN and max(index)<=len(obstacle_x)):
+            
+            for s_index in index:
+                #print("obsx:",obstacle_x[s_index])
+                obsx = obstacle_x[s_index]
+                obsy = obstacle_y[s_index]
+
+                odx = obsx - ix
+                ody = obsy - iy
+
+                odx2 = obsx - nx
+                ody2 = obsy - ny
+                obdis = math.hypot(odx,ody)
+                obdis2 = math.hypot(odx2,ody2)
+                if obdis < mindis:
+                    mindis = obdis
+
+                theta = cal_ang((nx,ny), (ix,iy), (obsx,obsy))
+                if  theta<=30:
+                    #print(obdis,dis)
+                    #debugger.show_circle1(ix,iy,dis)
+                    return True
+                #print(mindis)
+        
+        return False
 
     def dijkstra_search(self, start_x, start_y, goal_x, goal_y, road_map,
         sample_x, sample_y):

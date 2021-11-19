@@ -1,4 +1,5 @@
 #from vision import Vision
+from os import close
 from scipy.spatial import KDTree
 import numpy as np
 import random
@@ -27,9 +28,13 @@ def cal_ang(point_1, point_2, point_3):
     :param point_3: 点3坐标
     :return: 返回任意角的夹角值，这里只是返回点2的夹角
     """
+    #print(point_1,point_2,point_3)
     a=math.sqrt((point_2[0]-point_3[0])*(point_2[0]-point_3[0])+(point_2[1]-point_3[1])*(point_2[1] - point_3[1]))
     b=math.sqrt((point_1[0]-point_3[0])*(point_1[0]-point_3[0])+(point_1[1]-point_3[1])*(point_1[1] - point_3[1]))
     c=math.sqrt((point_1[0]-point_2[0])*(point_1[0]-point_2[0])+(point_1[1]-point_2[1])*(point_1[1]-point_2[1]))
+    print(a,b,c)
+    if not (a and b and c):
+        return 31
     A=math.degrees(math.acos((a*a-b*b-c*c)/(-2*b*c)))
     B=math.degrees(math.acos((b*b-a*a-c*c)/(-2*a*c)))
     C=math.degrees(math.acos((c*c-a*a-b*b)/(-2*a*b)))
@@ -61,9 +66,9 @@ class RRT(object):
 
         self.begin = Node(begin[0],begin[1])
         self.end = Node(goal[0],goal[1])
-        self.expandDis = 100
-        self.goalSampleRate = 0.05  # 选择终点的概率
-        self.startSampleRate = 0.05 # 反向选择起点的概率
+        self.expandDis =300
+        self.goalSampleRate = 0.1  # 选择终点的概率
+        self.startSampleRate = 0.1 # 反向选择起点的概率
         self.maxIter = 500
         self.nodeList = [self.begin]
         self.nodeList2 = [self.end]
@@ -252,7 +257,8 @@ class RRT(object):
         #print("oby:",obstacle_y)
 
         #print(obslist[0][index], obslist[1][index])
-
+        final_one = 0
+        closestpoint = 0
         while True:
             
             #edge = []
@@ -506,37 +512,7 @@ class RRT(object):
 
         return False
     
-    def check_obsnew(self, ix, iy, nx, ny, obstree, obslist,obstacle_x, obstacle_y):
-        x = ix
-        y = iy
-        dx = nx - ix
-        dy = ny - iy
-        angle = math.atan2(dy, dx)
-        dis = math.hypot(dx, dy)
 
-        if dis > self.MAX_EDGE_LEN:
-            return True
-
-        step_size = self.robot_size + self.avoid_dist
-        steps = round(dis/step_size)
-
-        #distance, index = obstree.query(np.array([x, y]))
-        #print("obsx:",obstacle_x)
-
-        for i in range(steps):
-            distance, index = obstree.query(np.array([x, y]))
-            #print(obslist[0][index], obslist[1][index])
-            if distance <= self.robot_size*2 + self.avoid_dist*2:
-                return True
-            x += step_size * math.cos(angle)
-            y += step_size * math.sin(angle)
-
-        # check for goal point
-        distance, index = obstree.query(np.array([nx, ny]))
-        if distance <= self.robot_size*2 + self.avoid_dist*2:
-            return True
-
-        return False
     def show_obs(self,ix, iy, nx, ny, obstacle_x, obstacle_y, obstree):
         x = ix
         y = iy
@@ -544,7 +520,9 @@ class RRT(object):
         dy = ny - iy
         angle = math.atan2(dy, dx)
         dis = math.hypot(dx, dy)
-        mindis = 1000
+        mindis = 300
+        mindis2 = 300
+
         if dis > self.MAX_EDGE_LEN:
             return True
         distance, index = obstree.query(np.array([x, y]),k=self.KNN)
@@ -566,9 +544,12 @@ class RRT(object):
                 obdis2 = math.hypot(odx2,ody2)
                 if obdis < mindis:
                     mindis = obdis
-
-                #theta = cal_ang((nx,ny), (ix,iy), (obsx,obsy))
-                if  obdis < dis and obdis2<2*self.avoid_dist:
+                if obdis2 < mindis2:
+                    mindis2 = obdis2
+               
+                #theta = cal_ang([nx,ny], [ix,iy], [obsx,obsy])
+                #print(dis)
+                if   mindis < dis  and  mindis2 < 2*self.avoid_dist:
                     #print(obdis,dis)
                     #debugger.show_circle1(ix,iy,dis)
                     return True
@@ -576,6 +557,95 @@ class RRT(object):
         
         return False
 
+    def optim_path(self,vision,path_x,path_y):
+        path_x.reverse()
+        path_y.reverse()
+        new_x = [path_x[0]]
+        new_y = [path_y[0]]
+        obstacle_x = [-999999]
+        obstacle_y = [-999999]
+        for robot_blue in vision.blue_robot:
+            if robot_blue.visible and robot_blue.id > 0:
+                obstacle_x.append(robot_blue.x)
+                obstacle_y.append(robot_blue.y)
+        for robot_yellow in vision.yellow_robot:
+            if robot_yellow.visible:
+                obstacle_x.append(robot_yellow.x)
+                obstacle_y.append(robot_yellow.y)
+        # Obstacle KD Tree
+        # print(np.vstack((obstacle_x, obstacle_y)).T)
+        obslist = [obstacle_x, obstacle_y]
+        
+        obstree = KDTree(np.vstack((obstacle_x, obstacle_y)).T)
+        # for i in range(1,len(path_x)):
+        #     for j in range(i+1,len(path_x)):
+        #         if  self.show_obs2(path_x[i],path_y[i],path_x[j],path_y[j],obstacle_x,obstacle_y,obstree):
+        #             break
+        #     new_x.append(path_x[j])
+        #     new_y.append(path_y[j])
+
+        # print(new_x)
+        now = 1
+        while True:
+            
+            if now+1>=len(path_x):
+                break
+            
+            for j in range(now+1,len(path_x)):
+                if  self.show_obs2(path_x[now],path_y[now],path_x[j],path_y[j],obstacle_x,obstacle_y,obstree):
+                    break
+            new_x.append(path_x[j])
+            new_y.append(path_y[j])
+            #print(new_x,new_y)
+            now = j
+        
+        new_x.reverse()
+        new_y.reverse()
+        return new_x,new_y
+
+    def show_obs2(self,ix, iy, nx, ny, obstacle_x, obstacle_y, obstree):
+        x = ix
+        y = iy
+        dx = nx - ix
+        dy = ny - iy
+        angle = math.atan2(dy, dx)
+        dis = math.hypot(dx, dy)
+        mindis = 300
+        mindis2 = 300
+
+        if dis > self.MAX_EDGE_LEN:
+            return True
+        distance, index = obstree.query(np.array([x, y]),k=self.KNN)
+        #print("index:",len(obstacle_x))
+        #print(len(obstacle_x),max(index))
+        if (max(index)>=self.KNN and max(index)<=len(obstacle_x)):
+            
+            for s_index in index:
+                #print("obsx:",obstacle_x[s_index])
+                obsx = obstacle_x[s_index]
+                obsy = obstacle_y[s_index]
+
+                odx = obsx - ix
+                ody = obsy - iy
+
+                odx2 = obsx - nx
+                ody2 = obsy - ny
+                obdis = math.hypot(odx,ody)
+                obdis2 = math.hypot(odx2,ody2)
+                if obdis < mindis:
+                    mindis = obdis
+                if obdis2 < mindis2:
+                    mindis2 = obdis2
+               
+                #theta = cal_ang([nx,ny], [ix,iy], [obsx,obsy])
+                #print(dis)
+                if  mindis < 1.8 * self.avoid_dist or mindis2 < 1.5 * self.avoid_dist:
+                    #print(obdis,dis)
+                    #debugger.show_circle1(ix,iy,dis)
+                    return True
+                #print(mindis)
+        
+        return False
 
     def dijkstra_search(self, start_x, start_y, goal_x, goal_y, road_map,
         sample_x, sample_y):

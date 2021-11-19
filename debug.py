@@ -158,6 +158,8 @@ class Debugger(object):
         self.draw_finalpath(package, path_x, path_y)
         self.sock.sendto(package.SerializeToString(), self.debug_address)
 
+    
+
     def show_path(self,path_x,path_y):
         package = Debug_Msgs()
         self.draw_finalpath(package,path_x,path_y)
@@ -178,7 +180,11 @@ class Debugger(object):
         self.draw_circle(package, x, y, radius)
         self.sock.sendto(package.SerializeToString(), self.debug_address)
 
-
+    def show_line(self, x1, y1, x2, y2):
+        package = Debug_Msgs()
+        self.draw_line(package,x1, y1, x2, y2)
+        self.sock.sendto(package.SerializeToString(), self.debug_address)
+        
     def send(self, package):
         self.sock.sendto(package.SerializeToString(), self.debug_address)
 
