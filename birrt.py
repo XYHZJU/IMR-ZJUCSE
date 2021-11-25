@@ -29,12 +29,15 @@ def cal_ang(point_1, point_2, point_3):
     :return: 返回任意角的夹角值，这里只是返回点2的夹角
     """
     #print(point_1,point_2,point_3)
+    
     a=math.sqrt((point_2[0]-point_3[0])*(point_2[0]-point_3[0])+(point_2[1]-point_3[1])*(point_2[1] - point_3[1]))
     b=math.sqrt((point_1[0]-point_3[0])*(point_1[0]-point_3[0])+(point_1[1]-point_3[1])*(point_1[1] - point_3[1]))
     c=math.sqrt((point_1[0]-point_2[0])*(point_1[0]-point_2[0])+(point_1[1]-point_2[1])*(point_1[1]-point_2[1]))
-    print(a,b,c)
+    if not a+b>c or a+c>b or b+c>a:
+        return 15
+    #print(a,b,c)
     if not (a and b and c):
-        return 31
+        return 15
     A=math.degrees(math.acos((a*a-b*b-c*c)/(-2*b*c)))
     B=math.degrees(math.acos((b*b-a*a-c*c)/(-2*a*c)))
     C=math.degrees(math.acos((c*c-a*a-b*b)/(-2*a*b)))
@@ -66,7 +69,7 @@ class RRT(object):
 
         self.begin = Node(begin[0],begin[1])
         self.end = Node(goal[0],goal[1])
-        self.expandDis =300
+        self.expandDis =250
         self.goalSampleRate = 0.1  # 选择终点的概率
         self.startSampleRate = 0.1 # 反向选择起点的概率
         self.maxIter = 500
@@ -546,10 +549,13 @@ class RRT(object):
                     mindis = obdis
                 if obdis2 < mindis2:
                     mindis2 = obdis2
+                
+                theta = 0
+                if (abs(obsx)<10000 and abs(obsy)<10000 and abs(ix)<10000 and abs(iy)<10000 and abs(nx)<10000 and abs(ny)<100000):
                
-                #theta = cal_ang([nx,ny], [ix,iy], [obsx,obsy])
+                    theta = cal_ang([nx,ny], [ix,iy], [obsx,obsy])
                 #print(dis)
-                if   mindis < dis  and  mindis2 < 2*self.avoid_dist:
+                if   theta<=15 and theta>=-15 and mindis <= dis  and  mindis2 <= 2*self.avoid_dist:
                     #print(obdis,dis)
                     #debugger.show_circle1(ix,iy,dis)
                     return True
@@ -639,7 +645,11 @@ class RRT(object):
                
                 #theta = cal_ang([nx,ny], [ix,iy], [obsx,obsy])
                 #print(dis)
-                if  mindis < 1.8 * self.avoid_dist or mindis2 < 1.5 * self.avoid_dist:
+                theta = 0
+                if (abs(obsx)<10000 and abs(obsy)<10000 and abs(ix)<10000 and abs(iy)<10000 and abs(nx)<10000 and abs(ny)<100000):
+               
+                    theta = cal_ang([nx,ny], [ix,iy], [obsx,obsy])
+                if  theta<=15 and theta>=-15 and (mindis < 1.5 * self.avoid_dist or mindis2 < 1.5 * self.avoid_dist):
                     #print(obdis,dis)
                     #debugger.show_circle1(ix,iy,dis)
                     return True
